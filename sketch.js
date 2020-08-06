@@ -1,6 +1,6 @@
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//        Letter.Matter v02
+//        Letter.Matter v1.0
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //      a series of generative 
 //        typographic worlds
@@ -11,52 +11,56 @@
 
 
 
+// QUESTIONS/NEXT STEPS:
+// ? array not working. 
+// ? ^ always stops drawing @ c (obviously & kvetch but not oaks?)
+// ? show animate : slow it down?
+// ? how to not have it change all stroke colors?
+// - make foamy letters
 
 
 var Engine = Matter.Engine,
-  World = Matter.World,
-  Bodies = Matter.Bodies,
-  Constraint = Matter.Constraint,
-  Mouse = Matter.Mouse,
-  MouseConstraint = Matter.MouseConstraint
-
+    World = Matter.World,
+    Bodies = Matter.Bodies,
+    Constraint = Matter.Constraint,
+    Mouse = Matter.Mouse,
+    MouseConstraint = Matter.MouseConstraint
 
 var engine
 var world
-var mConstraint
-var wordBlock = []
+var letters = []
 var ground
 var boundaries = []
-
+//var mConstraint
 
 const yAxis = 1
 let prevX, prevY
+let ptSize = 100
 let poemI = 0
-let ptSize = 30
+let poem = `ABDEFGHIJKLMNOPQRSTUVWXY&Z`
 let nextWordTime = 0
 
-let poem = 'A DAILY TEDIUM OF COMMUTING TO FIND REMOVE. YOU ARE RACING THE CLOCK ABOVE THE BAR KEEP TO CREATE AN IMPRESSION THAT CAN LAND ALL THE LITTLE DIALS SET TO; YES. YOU ARE TRAVELING ON A PIANO… STEPPING STRING TO STRING: YOU MUST PASS OVER ALL THE TRIP WIRE. MUST SOUND ONLY THOSE NOTES THAT BEAUTIFY THE CONVERSATION, AND NOT TOO PRACTICED IN THE PROCESS. HERE, YOUR BRAIN IS TOO FULL OF STATIC CHARGE TO PAY ANY NOTICE TO THE BUZZ OF APPREHENSION THAT VIBRATES YOUR SOBRIETY LIKE A NEVER ENDING TRAIN. THE GREATEST REMOVE THAT CAN BE OBTAINED BY LEGAL, MINIMUM WAGE MEANS; THE $3-DOLLAR AMERICAN CLASSIC-TOUCH CAR WASH. A CARWASH ADDRESSES THESE MOMENTS OF REMOVE AND VULNERABILITY DIRECTLY. A CAR WASH SAYS YES, THERE IS DANGER ALL ABOUT. YOU ARE IN THE EPICENTER OF A TRIPLE-COLOR FOAM TSUNAMI… BUT YOU? YOU ARE SURVIVING SPOT FREE. IN A DIVING BELL EQUIPPED WITH AN AM/FM STEREO & HEATED POWER LEATHER SEATS.'
+//let poem = `abcdefghijklmnopqrstuvwxy&z`
 
 
 
 
 function preload(){
-  //font = loadFont('assets/Kvetch-01-RegularItalic.otf')
+  font = loadFont('assets/Kvetch-0.1-Bold.otf')
+  //font = loadFont('assets/oaks_future_V2-BoldCondensed.otf')
   //font = loadFont('assets/Obviously-NarrowBlack.otf')
-  font = loadFont('assets/Obviously-NarrowMedium.otf')
+  //font = loadFont('assets/Obviously-ExtendedMedium.otf')
 }
 
 
 
 function setup() {
   var canvas = createCanvas(windowWidth, windowHeight)
-  
   engine = Engine.create()
   world = engine.world
-  //nextWordTime = engine.timing.timestamp
   // Make Everything Float:
   engine.world.gravity.y = -1
-
+  
 
   // make a floor (new Boundary (x, y, width, height, angle)
   boundaries.push(new Boundary (width/2, height-5, width, 10, 0))
@@ -64,7 +68,8 @@ function setup() {
   boundaries.push(new Boundary (5, height/2, 10, height, 0))
   boundaries.push(new Boundary (width-5, height/2, 10, height, 0))
   
-   var canvasMouse = Mouse.create(canvas.elt)
+  
+  var canvasMouse = Mouse.create(canvas.elt)
   canvasMouse.pixelRatio = pixelDensity()
   var options = {
     mouse: canvasMouse
@@ -76,83 +81,84 @@ function setup() {
 }
 
 
-
-
-
 function draw() {
-  Engine.update(engine)
+  
   background(220)
+  Engine.update(engine)
   
-  //if (wordBlock.length <= 140){
-    let word = split(poem, ' ')
-  
-    if (engine.timing.timestamp >= nextWordTime){
-      nextWordTime = engine.timing.timestamp + (800 + random(-100, 100))
-      wordBlock.push(new Rectangle(
-        windowWidth/2,
-        (windowHeight/2) + random(-200, 200),
-        this.w,
-        this.h,
-        word[poemI]
-    )  )  
-
+   if (engine.timing.timestamp >= nextWordTime){
+    nextWordTime = engine.timing.timestamp + (800 + random(-100, 100))
+    glyph = split(poem, '')
+    letters.push(new Letter(
+      displayWidth/2 - random(-100, 100), 
+      displayHeight/2 - random(-100, 100), 
+      ptSize, 
+      glyph[poemI]
+      )
+    )
     poemI = (poemI + 1) % poem.length
-}
     
-
-  for (var i = 0; i < wordBlock.length; i++) {
-    wordBlock[i].show();
-    if (wordBlock[i].isOffScreen()){
+  }
+    
+    
+  for (var i = 0; i < letters.length; i++) {
+    letters[i].show();
+    if (letters[i].isOffScreen()){
       // splice removes objects from screen
-      wordBlock[i].removeFromWorld()
-      wordBlock.splice(i, 1)
+      letters[i].removeFromWorld()
+      letters.splice(i, 1)
       i--
     }
   }
   
+  
     for (var i = 0; i < boundaries.length; i++) {
     boundaries[i].show();
   }  
-  
+
 }
 
 
-
-
-
-
-function Rectangle(x, y, w, h, poem) {
-  var options = {
-    friction: .8,
-    restitution: .4
-    //density: .001
-  }
-
+// function mouseClicked() {
   
+//   if (mConstraint.body) {
+//      return
+//   } 
+  
+//   glyph = split(poem, '')
+//   letters.push(new Letter(mouseX, mouseY, ptSize, glyph[poemI]))
+//   poemI = (poemI + 1) % poem.length
+  
+// }
+
+
+
+function Letter(x, y, ptSize, poem) {
+  var options = {
+    friction: .01,
+    restitution: .7,
+    angle : radians(0),
+  }
 
   // textToPoints(glyph, x, y, ptSize)
   this.ptSize = ptSize
-  this.poem = poemI
-  let points = font.textToPoints(poem, 0, 0, this.ptSize)
-  let bounds = font.textBounds(poem, 0, 0, this.ptSize)
-
-  this.w = bounds.w
-  this.h = bounds.h
+  this.poem = poem
   this.density = .001
-  
+  this.slop = 0.06
+  let points = font.textToPoints(this.poem, 0, 0, this.ptSize)
+  let bounds = font.textBounds(this.poem, 0, 0, this.ptSize)
+
   
   for (let pt of points){
     pt.x = pt.x - bounds.x - bounds.w/2
     pt.y = pt.y - bounds.y - bounds.h/2
   }
   
-  
-  // defining center, then defining bounds
-  this.body = Bodies.rectangle(x + bounds.w/2, y + bounds.h/2, bounds.w, bounds.h, options)
-  
-  this.poem = poem
-  this.bounds = bounds
+  this.pts = points
+  this.body = Bodies.fromVertices(x, y, points, options)
+  //this.body.angle = PI/4
   World.add(world, this.body)
+  this.bounds = bounds
 
   this.isOffScreen = function() {
     var pos = this.body.position
@@ -166,29 +172,40 @@ function Rectangle(x, y, w, h, poem) {
   this.show = function() {
     var pos = this.body.position
     var angle = this.body.angle
-
     
     push()
     translate(pos.x, pos.y)
     rotate(angle)
+    // to visualize bounds
+    //noStroke()
+      for (let pt of this.pts){
+        //colorMode(HSB)
+        strokeWeight(1)
+        //stroke((frameCount*1.5) % 360, 100, 100)
+        stroke((frameCount*1.5) % 360, 100, 100)
+        circle(pt.x, pt.y, 10)
+        //circle(pt.x, pt.y, random(5, 15))
+        }
     rectMode(CENTER)
-    noFill()
-    strokeWeight(1)
-    rect(0, 0, this.bounds.w, this.bounds.h)
-
-    // cycle letters with a loop here i think?
-    fill(0)
     noStroke()
+    fill("white")
     textFont(font)
-    textSize(15)
+    textSize(ptSize)
     textAlign(CENTER, CENTER)
-    translate(0, 0)
-    text(this.poem, 0, -this.bounds.h/5)
-    //text(poem[i], 0, 0)
+    translate(0, displayWidth * .004)
+    text(this.poem, 0, -this.bounds.h/4)
     pop()
     
-
-
+    
+    // !! FOR VISUALIZING WHERE MATTER IS DRAWING BOUNDS
+    // fill ('red')
+    //   for (let pt of this.body.vertices){
+    //   push()
+    //   translate(pt.x, pt.y)
+    //   rotate(angle)
+    //   ellipse(0, 0, 10)
+    //   pop() 
+    //  }
   }
 }
 
@@ -196,8 +213,8 @@ function Rectangle(x, y, w, h, poem) {
 
 function Boundary(x, y, w, h, a) {
   var options = {
-    friction: .3,
-    restitution: .06,
+    friction: 0.1,
+    restitution: 0,
     isStatic: true,
     angle: a
   }
@@ -222,7 +239,3 @@ function Boundary(x, y, w, h, a) {
 
   }
 }
-
-
-
-
